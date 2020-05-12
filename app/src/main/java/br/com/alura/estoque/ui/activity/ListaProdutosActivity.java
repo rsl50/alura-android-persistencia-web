@@ -47,40 +47,36 @@ public class ListaProdutosActivity extends AppCompatActivity {
     }
 
     private void buscaProdutos() {
-        ProdutoService service  = new EstoqueRetrofit().getProdutoService();
+        buscaProdutosInternos();
+    }
 
-        Call<List<Produto>> call = service.buscaTodos();
-
+    private void buscaProdutosInternos() {
         //task para leitura de produtos internamente
         new BaseAsyncTask<>(dao::buscaTodos,
                 resultado -> {
                     //carrega produtos internamente
                     adapter.atualiza(resultado);
-
-                    //inicia task para carregar produtos online
-                    new BaseAsyncTask<>(() -> {
-                        try {
-                            Thread.sleep(3000);
-                            Response<List<Produto>> resposta = call.execute();
-                            List<Produto> produtosNovos = resposta.body();
-                            dao.salva(produtosNovos);//faz com que produtos recebidos online sejam gravados no database interno para exibição offline
-                        } catch (IOException e){
-                            e.printStackTrace();
-                        } catch (InterruptedException e) {
-                            e.printStackTrace();
-                        }
-                        return dao.buscaTodos();//exibe os produtos usando o database interno
-                    }, produtosNovos ->{
-                        //segundo listener em caso de erro
-                        if (produtosNovos != null) {
-                            adapter.atualiza(produtosNovos);
-                        } else {
-                            Toast.makeText(this,
-                                    "Não foi possível buscar os produtos da API",
-                                    Toast.LENGTH_SHORT).show();
-                        }
-                    }).executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);//evita que thread entre na fila de execução, criando uma nova thread
+                    buscapProdutosNaApi();
                 }).execute();
+    }
+
+    private void buscapProdutosNaApi() {
+        ProdutoService service  = new EstoqueRetrofit().getProdutoService();
+        Call<List<Produto>> call = service.buscaTodos();
+
+        //inicia task para carregar produtos online
+        new BaseAsyncTask<>(() -> {
+            try {
+                Response<List<Produto>> resposta = call.execute();
+                List<Produto> produtosNovos = resposta.body();
+                dao.salva(produtosNovos);//faz com que produtos recebidos online sejam gravados no database interno para exibição offline
+            } catch (IOException e){
+                e.printStackTrace();
+            }
+            return dao.buscaTodos();//exibe os produtos usando o database interno
+        }, produtosNovos ->
+            adapter.atualiza(produtosNovos))
+            .executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);//evita que thread entre na fila de execução, criando uma nova thread
     }
 
     private void configuraListaProdutos() {
