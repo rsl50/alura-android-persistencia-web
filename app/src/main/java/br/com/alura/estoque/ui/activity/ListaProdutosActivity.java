@@ -17,6 +17,7 @@ import br.com.alura.estoque.asynctask.BaseAsyncTask;
 import br.com.alura.estoque.database.EstoqueDatabase;
 import br.com.alura.estoque.database.dao.ProdutoDAO;
 import br.com.alura.estoque.model.Produto;
+import br.com.alura.estoque.repository.ProdutoRepository;
 import br.com.alura.estoque.retrofit.EstoqueRetrofit;
 import br.com.alura.estoque.retrofit.service.ProdutoService;
 import br.com.alura.estoque.ui.dialog.EditaProdutoDialog;
@@ -43,40 +44,8 @@ public class ListaProdutosActivity extends AppCompatActivity {
         EstoqueDatabase db = EstoqueDatabase.getInstance(this);
         dao = db.getProdutoDAO();
 
-        buscaProdutos();
-    }
-
-    private void buscaProdutos() {
-        buscaProdutosInternos();
-    }
-
-    private void buscaProdutosInternos() {
-        //task para leitura de produtos internamente
-        new BaseAsyncTask<>(dao::buscaTodos,
-                resultado -> {
-                    //carrega produtos internamente
-                    adapter.atualiza(resultado);
-                    buscapProdutosNaApi();
-                }).execute();
-    }
-
-    private void buscapProdutosNaApi() {
-        ProdutoService service  = new EstoqueRetrofit().getProdutoService();
-        Call<List<Produto>> call = service.buscaTodos();
-
-        //inicia task para carregar produtos online
-        new BaseAsyncTask<>(() -> {
-            try {
-                Response<List<Produto>> resposta = call.execute();
-                List<Produto> produtosNovos = resposta.body();
-                dao.salva(produtosNovos);//faz com que produtos recebidos online sejam gravados no database interno para exibição offline
-            } catch (IOException e){
-                e.printStackTrace();
-            }
-            return dao.buscaTodos();//exibe os produtos usando o database interno
-        }, produtosNovos ->
-            adapter.atualiza(produtosNovos))
-            .executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);//evita que thread entre na fila de execução, criando uma nova thread
+        ProdutoRepository repository = new ProdutoRepository(dao);
+        repository.buscaProdutos(adapter::atualiza);
     }
 
     private void configuraListaProdutos() {
