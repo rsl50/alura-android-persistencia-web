@@ -1,5 +1,6 @@
 package br.com.alura.estoque.ui.activity;
 
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.widget.Toast;
 
@@ -50,28 +51,36 @@ public class ListaProdutosActivity extends AppCompatActivity {
 
         Call<List<Produto>> call = service.buscaTodos();
 
-        new BaseAsyncTask<>(() -> {
-            try {
-                Response<List<Produto>> resposta = call.execute();
-                List<Produto> produtosNovos = resposta.body();
-                dao.salva(produtosNovos);
-            } catch (IOException e){
-                e.printStackTrace();
-            }
-            return dao.buscaTodos();
-        }, produtosNovos ->{
-            //segundo listener em caso de erro
-            if (produtosNovos != null) {
-                adapter.atualiza(produtosNovos);
-            } else {
-                Toast.makeText(this,
-                        "Não foi possível buscar os produtos da API",
-                        Toast.LENGTH_SHORT).show();
-            }
-        }).execute();
-//        new BaseAsyncTask<>(dao::buscaTodos,
-//                resultado -> adapter.atualiza(resultado))
-//                .execute();
+        //task para leitura de produtos internamente
+        new BaseAsyncTask<>(dao::buscaTodos,
+                resultado -> {
+                    //carrega produtos internamente
+                    adapter.atualiza(resultado);
+
+                    //inicia task para carregar produtos online
+                    new BaseAsyncTask<>(() -> {
+                        try {
+                            Thread.sleep(3000);
+                            Response<List<Produto>> resposta = call.execute();
+                            List<Produto> produtosNovos = resposta.body();
+                            dao.salva(produtosNovos);//faz com que produtos recebidos online sejam gravados no database interno para exibição offline
+                        } catch (IOException e){
+                            e.printStackTrace();
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }
+                        return dao.buscaTodos();//exibe os produtos usando o database interno
+                    }, produtosNovos ->{
+                        //segundo listener em caso de erro
+                        if (produtosNovos != null) {
+                            adapter.atualiza(produtosNovos);
+                        } else {
+                            Toast.makeText(this,
+                                    "Não foi possível buscar os produtos da API",
+                                    Toast.LENGTH_SHORT).show();
+                        }
+                    }).executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);//evita que thread entre na fila de execução, criando uma nova thread
+                }).execute();
     }
 
     private void configuraListaProdutos() {

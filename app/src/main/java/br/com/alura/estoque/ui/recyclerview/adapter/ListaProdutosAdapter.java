@@ -57,6 +57,8 @@ public class ListaProdutosAdapter extends
     }
 
     public void atualiza(List<Produto> produtos) {
+        //evita crash por mudança no tamanho local da lista x lista remota
+        notifyItemRangeRemoved(0, this.produtos.size());
         this.produtos.clear();
         this.produtos.addAll(produtos);
         this.notifyItemRangeInserted(0, this.produtos.size());
