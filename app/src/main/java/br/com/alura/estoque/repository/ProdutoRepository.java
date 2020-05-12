@@ -11,14 +11,17 @@ import br.com.alura.estoque.model.Produto;
 import br.com.alura.estoque.retrofit.EstoqueRetrofit;
 import br.com.alura.estoque.retrofit.service.ProdutoService;
 import retrofit2.Call;
+import retrofit2.Callback;
 import retrofit2.Response;
 
 public class ProdutoRepository {
 
     private final ProdutoDAO dao;
+    private final ProdutoService service;
 
     public ProdutoRepository(ProdutoDAO dao) {
         this.dao = dao;
+        this.service  = new EstoqueRetrofit().getProdutoService();
     }
 
     public void buscaProdutos(DadosCarregadosListener<List<Produto>> listener) {
@@ -36,7 +39,6 @@ public class ProdutoRepository {
     }
 
     private void buscapProdutosNaApi(DadosCarregadosListener<List<Produto>> listener) {
-        ProdutoService service  = new EstoqueRetrofit().getProdutoService();
         Call<List<Produto>> call = service.buscaTodos();
 
         //inicia task para carregar produtos online
@@ -54,11 +56,27 @@ public class ProdutoRepository {
     }
 
     public void salva(Produto produto, DadosCarregadosListener<Produto> listener) {
-        new BaseAsyncTask<>(() -> {
-            long id = dao.salva(produto);
-            return dao.buscaProduto(id);
-        }, listener::quandoCarregados)
-                .execute();
+        Call<Produto> call = service.salva(produto);
+        //execução assíncrona da call, as threads são executadas em paralelo
+        call.enqueue(new Callback<Produto>() {
+            @Override
+            public void onResponse(Call<Produto> call, Response<Produto> response) {
+                Produto produtoSalvo = response.body();
+
+                new BaseAsyncTask<>(() -> {
+                    long id = dao.salva(produtoSalvo);
+                    return dao.buscaProduto(id);
+                }, listener::quandoCarregados)
+                    .execute();
+            }
+
+            @Override
+            public void onFailure(Call<Produto> call, Throwable t) {
+
+            }
+        });
+
+
     }
 
     public interface DadosCarregadosListener <T>{
