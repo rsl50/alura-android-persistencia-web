@@ -86,6 +86,34 @@ public class ProdutoRepository {
                 .execute();
     }
 
+    public void edita(Produto produto, DadosCarregadosCallback<Produto> callback) {
+        editaNaApi(produto, callback);
+    }
+
+    private void editaNaApi(Produto produto, DadosCarregadosCallback<Produto> callback) {
+        Call<Produto> call = service.edita(produto.getId(), produto);
+        call.enqueue(new BaseCallback<>(new BaseCallback.RespostaCallback<Produto>() {
+            @Override
+            public void quandoSucesso(Produto produto) {
+                editaInterno(produto, callback);
+            }
+
+            @Override
+            public void quandoFalha(String erro) {
+                callback.quandoFalha(erro);
+            }
+        }));
+    }
+
+    private void editaInterno(Produto produto, DadosCarregadosCallback<Produto> callback) {
+        new BaseAsyncTask<>(() -> {
+            dao.atualiza(produto);
+            return produto;
+        }, callback::quandoSucesso)
+                .execute();
+    }
+
+
 
     public interface DadosCarregadosCallback <T>{
         void quandoSucesso(T resultado);
