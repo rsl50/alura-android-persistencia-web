@@ -1,10 +1,5 @@
 package br.com.alura.estoque.repository;
 
-import android.os.AsyncTask;
-
-import androidx.annotation.NonNull;
-
-import java.io.IOException;
 import java.util.List;
 
 import br.com.alura.estoque.asynctask.BaseAsyncTask;
@@ -14,9 +9,6 @@ import br.com.alura.estoque.retrofit.EstoqueRetrofit;
 import br.com.alura.estoque.retrofit.callback.BaseCallback;
 import br.com.alura.estoque.retrofit.service.ProdutoService;
 import retrofit2.Call;
-import retrofit2.Callback;
-import retrofit2.Response;
-import retrofit2.internal.EverythingIsNonNull;
 
 public class ProdutoRepository {
 
