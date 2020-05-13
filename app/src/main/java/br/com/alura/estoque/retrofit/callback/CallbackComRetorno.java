@@ -5,6 +5,9 @@ import retrofit2.Callback;
 import retrofit2.Response;
 import retrofit2.internal.EverythingIsNonNull;
 
+import static br.com.alura.estoque.retrofit.callback.MensagensCallback.MENSAGEM_ERRO_FALHA_COMUNICACAO;
+import static br.com.alura.estoque.retrofit.callback.MensagensCallback.MENSAGEM_ERRO_RESPOSTA_NAO_SUCEDIDA;
+
 public class CallbackComRetorno<T> implements Callback<T> {
 
     private final RespostaCallback<T> callback;
@@ -23,7 +26,7 @@ public class CallbackComRetorno<T> implements Callback<T> {
                 callback.quandoSucesso(resultado);
             }
         } else {
-            callback.quandoFalha("Resposta não sucedida");
+            callback.quandoFalha(MENSAGEM_ERRO_RESPOSTA_NAO_SUCEDIDA);
         }
     }
 
@@ -32,7 +35,7 @@ public class CallbackComRetorno<T> implements Callback<T> {
     @Override
     @EverythingIsNonNull
     public void onFailure(Call call, Throwable t) {
-        callback.quandoFalha("Falha de comunicação: " + t.getMessage());
+        callback.quandoFalha(MENSAGEM_ERRO_FALHA_COMUNICACAO + t.getMessage());
     }
 
     public interface RespostaCallback <T> {
