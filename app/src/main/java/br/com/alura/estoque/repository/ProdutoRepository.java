@@ -6,7 +6,8 @@ import br.com.alura.estoque.asynctask.BaseAsyncTask;
 import br.com.alura.estoque.database.dao.ProdutoDAO;
 import br.com.alura.estoque.model.Produto;
 import br.com.alura.estoque.retrofit.EstoqueRetrofit;
-import br.com.alura.estoque.retrofit.callback.BaseCallback;
+import br.com.alura.estoque.retrofit.callback.CallbackComRetorno;
+import br.com.alura.estoque.retrofit.callback.CallbackSemRetorno;
 import br.com.alura.estoque.retrofit.service.ProdutoService;
 import retrofit2.Call;
 
@@ -37,7 +38,7 @@ public class ProdutoRepository {
     private void buscapProdutosNaApi(DadosCarregadosCallback<List<Produto>> callback) {
         Call<List<Produto>> call = service.buscaTodos();
 
-        call.enqueue(new BaseCallback<>(new BaseCallback.RespostaCallback<List<Produto>>() {
+        call.enqueue(new CallbackComRetorno<>(new CallbackComRetorno.RespostaCallback<List<Produto>>() {
             @Override
             public void quandoSucesso(List<Produto> produtosNovos) {
                 atualizaInterno(produtosNovos, callback);
@@ -65,7 +66,7 @@ public class ProdutoRepository {
     private void salvaNaApi(Produto produto, DadosCarregadosCallback<Produto> callback) {
         Call<Produto> call = service.salva(produto);
         //execução assíncrona da call, as threads são executadas em paralelo
-        call.enqueue(new BaseCallback<>(new BaseCallback.RespostaCallback<Produto>() {
+        call.enqueue(new CallbackComRetorno<>(new CallbackComRetorno.RespostaCallback<Produto>() {
             @Override
             public void quandoSucesso(Produto produto) {
                 salvaInterno(produto, callback);
@@ -92,7 +93,7 @@ public class ProdutoRepository {
 
     private void editaNaApi(Produto produto, DadosCarregadosCallback<Produto> callback) {
         Call<Produto> call = service.edita(produto.getId(), produto);
-        call.enqueue(new BaseCallback<>(new BaseCallback.RespostaCallback<Produto>() {
+        call.enqueue(new CallbackComRetorno<>(new CallbackComRetorno.RespostaCallback<Produto>() {
             @Override
             public void quandoSucesso(Produto produto) {
                 editaInterno(produto, callback);
@@ -119,9 +120,9 @@ public class ProdutoRepository {
 
     public void removeNaApi(Produto produto, DadosCarregadosCallback<Void> callback) {
         Call<Void> call = service.remove(produto.getId());
-        call.enqueue(new BaseCallback<>(new BaseCallback.RespostaCallback<Void>() {
+        call.enqueue(new CallbackSemRetorno(new CallbackSemRetorno.RespostaCallback() {
             @Override
-            public void quandoSucesso(Void resultado) {
+            public void quandoSucesso() {
                 removeInterno(produto, callback);
             }
 
