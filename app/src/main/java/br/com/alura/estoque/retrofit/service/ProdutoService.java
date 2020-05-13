@@ -18,6 +18,8 @@ public interface ProdutoService {
     @POST("produto")
     Call<Produto> salva(@Body Produto produto);
 
+    //Para saber mais - Variações nas requisições
+    //https://square.github.io/retrofit/
     @PUT("produto/{id}") //copia o @Path em {id} para o endereço incluir o id do produto
     Call<Produto> edita(@Path("id")long id, @Body Produto produto);
 }
