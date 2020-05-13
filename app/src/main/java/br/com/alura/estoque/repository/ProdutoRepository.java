@@ -27,35 +27,52 @@ public class ProdutoRepository {
         this.service  = new EstoqueRetrofit().getProdutoService();
     }
 
-    public void buscaProdutos(DadosCarregadosListener<List<Produto>> listener) {
-        buscaProdutosInternos(listener);
+    public void buscaProdutos(DadosCarregadosCallback<List<Produto>> callback) {
+        buscaProdutosInternos(callback);
     }
 
-    private void buscaProdutosInternos(DadosCarregadosListener<List<Produto>> listener) {
+    private void buscaProdutosInternos(DadosCarregadosCallback<List<Produto>> callback) {
         //task para leitura de produtos internamente
         new BaseAsyncTask<>(dao::buscaTodos,
                 resultado -> {
                     //carrega produtos internamente
-                    listener.quandoCarregados(resultado);
-                    buscapProdutosNaApi(listener);
+                    callback.quandoSucesso(resultado);
+                    buscapProdutosNaApi(callback);
                 }).execute();
     }
 
-    private void buscapProdutosNaApi(DadosCarregadosListener<List<Produto>> listener) {
+    private void buscapProdutosNaApi(DadosCarregadosCallback<List<Produto>> callback) {
         Call<List<Produto>> call = service.buscaTodos();
 
-        //inicia task para carregar produtos online
-        new BaseAsyncTask<>(() -> {
-            try {
-                Response<List<Produto>> resposta = call.execute();
-                List<Produto> produtosNovos = resposta.body();
-                dao.salva(produtosNovos);//faz com que produtos recebidos online sejam gravados no database interno para exibição offline
-            } catch (IOException e){
-                e.printStackTrace();
+        call.enqueue(new Callback<List<Produto>>() {
+            //Sempre que algo é executado no onResponse ou OnFailure, a execução é na UI Thread, por isso se usa o AsyncTask para não travar ela
+            @Override
+            @EverythingIsNonNull
+            public void onResponse(Call<List<Produto>> call, Response<List<Produto>> response) {
+                if (response.isSuccessful()){
+                    List<Produto> produtosNovos = response.body();
+                    if (produtosNovos != null) {
+                        atualizaInterno(produtosNovos, callback);
+                    }
+                } else {
+                    callback.quandoFalha("Resposta não sucedida");
+                }
             }
-            return dao.buscaTodos();//exibe os produtos usando o database interno
-        }, listener::quandoCarregados)
-                .executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);//evita que thread entre na fila de execução, criando uma nova thread
+
+            @Override
+            @EverythingIsNonNull
+            public void onFailure(Call<List<Produto>> call, Throwable t) {
+                callback.quandoFalha("Falha de comunicação: " + t.getMessage());
+            }
+        });
+    }
+
+    private void atualizaInterno(List<Produto> produtos, DadosCarregadosCallback<List<Produto>> callback) {
+        new BaseAsyncTask<>(() -> {
+            dao.salva(produtos);
+            return dao.buscaTodos();
+        }, callback::quandoSucesso)
+                .execute();
     }
 
     public void salva(Produto produto, DadosCarregadosCallback<Produto> callback) {
@@ -79,7 +96,8 @@ public class ProdutoRepository {
                     callback.quandoFalha("Resposta não sucedida");
                 }
             }
-
+            //Para saber mais - Mais cuidados com a resposta do Retrofit
+            //https://medium.com/@tsaha.cse/advanced-retrofit2-part-1-network-error-handling-response-caching-77483cf68620
             @Override
             @EverythingIsNonNull
             public void onFailure(Call<Produto> call, Throwable t) {
@@ -96,9 +114,6 @@ public class ProdutoRepository {
                 .execute();
     }
 
-    public interface DadosCarregadosListener <T>{
-        void quandoCarregados(T produtos);
-    }
 
     public interface DadosCarregadosCallback <T>{
         void quandoSucesso(T resultado);
